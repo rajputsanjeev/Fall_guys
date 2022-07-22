@@ -8,6 +8,7 @@ namespace PlayerController
 {
     public class PlayerAnimationController : MonoBehaviour
     {
+        public PlayerMovement playerMovement;
         [SerializeField] private Animator animator;
         private Vector3 lastCharacterAngle;
 
@@ -35,7 +36,7 @@ namespace PlayerController
             UpdateAnimatorParameters();
 
             //jump state
-            if (PlayerInput.IsJump())
+            if (PlayerInput.IsJump() && playerMovement.IsGrounded())
             {
                 animator.CrossFadeInFixedTime("Jump", 0.1f);
             }

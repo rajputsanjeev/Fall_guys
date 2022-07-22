@@ -18,8 +18,9 @@ namespace PlayerController
         public PlayerMovementType playerMovement = PlayerMovementType.RIGIDBODY_VELOCITY;
 
        [SerializeField] private Rigidbody rigidbody;
-
+        [SerializeField] private CapsuleCollider capsuleCollider;
         [SerializeField] private float moveSpeed;
+
         [Range(0,10)]
         [SerializeField] private float movementSmooth;
         private float currentMoveSpeed;
@@ -29,37 +30,92 @@ namespace PlayerController
         [SerializeField] private float rotationSmooth;
         private float currentRotationSpeed;
 
-        public float jumpHeight;
-        private bool isJumping;
+        public float jumpHeight = 9.8f;
+
+        public float groundDistance;
+        private RaycastHit groundHit;
+       [SerializeField] private LayerMask grounded;
+
+        [Tooltip("The length of the Ray cast to detect ground ")]
+        public float groundDetectionDistance = 10f;
+        [Tooltip("Distance to became not grounded")]
+        [Range(0, 10)]
+        public float groundMinDistance = 0.1f;
+        [Range(0, 10)]
+        public float groundMaxDistance = 0.5f;
+        public bool jumpWithRigidbodyForce;
+        private float extraGravity = -10f;
+        public float gravityScale = 10f;
 
         private void FixedUpdate()
         {
             Physics.SyncTransforms();
             MoveRotationSpeed();
-            JumpAction();
+            ChekGroundDistance();
+            JumpBehaviour();
         }
-        #region Ground Check
-        private void CheckGround()
-        {
 
+        #region Ground Check
+        public bool IsGrounded()
+        {
+           Physics.SphereCast(capsuleCollider.bounds.center,capsuleCollider.radius , Vector3.down ,out groundHit,2f,grounded ,QueryTriggerInteraction.UseGlobal);
+            return (groundHit.collider != null);
         }
         #endregion
 
         #region Action
-        private void JumpAction()
+        private void JumpBehaviour()
         {
-            isJumping = PlayerInput.IsJump();
+            Debug.Log("IsGrounded " + IsGrounded());
 
-            if (!isJumping)
+            if (IsGrounded() && PlayerInput.IsJump())
             {
-                return;
+                if (jumpWithRigidbodyForce)
+                {
+                    rigidbody.AddForce(Vector3.up * 35f, ForceMode.Impulse);
+                }
+                else
+                {
+                    var vel = rigidbody.velocity;
+                    vel.y = jumpHeight;
+                    rigidbody.velocity = vel;
+                }
             }
+        }
+        #endregion
 
-             isJumping = false;
-             var vel = rigidbody.velocity;
-             vel.y = jumpHeight;
-             rigidbody.velocity = vel;
-            
+        #region Ground Distance 
+        private void ChekGroundDistance()
+        {
+            if (capsuleCollider != null)
+            {
+                // radius of the SphereCast
+                float radius = capsuleCollider.radius * 0.9f;
+                var dist = groundDetectionDistance;
+                // ray for RayCast
+                Ray ray2 = new Ray(transform.position + new Vector3(0, capsuleCollider.height / 2, 0), Vector3.down);
+                // raycast for check the ground distance
+                if (Physics.Raycast(ray2, out groundHit, (capsuleCollider.height / 2) + dist, grounded) && !groundHit.collider.isTrigger)
+                {
+                    dist = transform.position.y - groundHit.point.y;
+                }
+                // sphere cast around the base of the capsule to check the ground distance
+                if (dist >= groundMinDistance)
+                {
+                    Vector3 pos = transform.position + Vector3.up * (capsuleCollider.radius);
+                    Ray ray = new Ray(pos, -Vector3.up);
+                    if (Physics.SphereCast(ray, radius, out groundHit, capsuleCollider.radius + groundMaxDistance, grounded) && !groundHit.collider.isTrigger)
+                    {
+                        Physics.Linecast(groundHit.point + (Vector3.up * 0.1f), groundHit.point + Vector3.down * 0.15f, out groundHit, grounded);
+                        float newDist = transform.position.y - groundHit.point.y;
+                        if (dist > newDist)
+                        {
+                            dist = newDist;
+                        }
+                    }
+                }
+                groundDistance = (float)System.Math.Round(dist, 2);
+            }
         }
         #endregion
 
@@ -123,23 +179,23 @@ namespace PlayerController
                     break;
             }
           }
-          #endregion
-         
-          #region Rotation Handler
-          /// <summary>
-          /// Determine the direction the player will face based on input and the referenceTransform
-          /// </summary>
-          /// <param name="referenceTransform"></param>
-          public virtual void UpdateRotation(Vector3 _direction)
-          {
-              if (PlayerInput.GetMovementInput().magnitude > 0)
-              {
-                  Quaternion rotation = Quaternion.LookRotation(PlayerInput.GetMovementInput(), Vector3.up);
-                  this.transform.rotation = Quaternion.Slerp(this.transform.rotation, rotation, currentRotationSpeed);
-              }
-          }
-          #endregion
-         
+        #endregion
+
+        #region Rotation Handler
+        /// <summary>
+        /// Determine the direction the player will face based on input and the referenceTransform
+        /// </summary>
+        /// <param name="referenceTransform"></param>
+        public virtual void UpdateRotation(Vector3 _direction)
+        {
+            if (PlayerInput.GetMovementInput().magnitude > 0)
+            {
+                Quaternion rotation = Quaternion.LookRotation(PlayerInput.GetMovementInput(), Vector3.up);
+                this.transform.rotation = Quaternion.Slerp(this.transform.rotation, rotation, currentRotationSpeed);
+            }
+        }
+        #endregion
+
         #endregion
     }
 }
