@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace PlayerController.InputController
 {
-    public class PlayerInput
+    public class PlayerInputController
     {
         public static Vector3 GetMovementInput()
         {

@@ -27,7 +27,7 @@ namespace PlayerController
             CalculateRotationMagnitude();
 
             //calculate the direction by normalize the vecrore
-            Vector3 _direction = PlayerInput.GetMovementInput();
+            Vector3 _direction = PlayerInputController.GetMovementInput();
 
             // set the animator speed
             SetAnimatorMoveSpeed(_direction);
@@ -36,7 +36,7 @@ namespace PlayerController
             UpdateAnimatorParameters();
 
             //jump state
-            if (PlayerInput.IsJump() && playerMovement.IsGrounded())
+            if (PlayerInputController.IsJump() && playerMovement.IsGrounded())
             {
                 animator.CrossFadeInFixedTime("Jump", 0.1f);
             }
